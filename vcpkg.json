@@ -1,0 +1,7 @@
+{
+    "name": "vulkan-tutorial",
+    "dependencies": [
+      "glfw3",
+      "glm"
+    ]
+  }
