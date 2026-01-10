@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "helloTriangleApplication.h"
+#include "helloTriangleApplication.hpp"
 
 int main() {
     HelloTriangleApplication app;

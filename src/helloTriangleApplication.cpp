@@ -1,4 +1,4 @@
-#include "helloTriangleApplication.h"
+#include "helloTriangleApplication.hpp"
 
 #include <GLFW/glfw3.h>
 #include <cstddef>
