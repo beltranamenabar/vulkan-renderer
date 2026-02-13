@@ -1,19 +1,23 @@
 #include "helloTriangleApplication.hpp"
 
-#include <GLFW/glfw3.h>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <fstream>
 #include <limits>
+#include <ranges>
 #include <stdexcept>
 #include <unordered_set>
+
+#include <GLFW/glfw3.h>
 
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_handles.hpp>
 #include <vulkan/vulkan_structs.hpp>
+
+#include "vertex.hpp"
 
 PFN_vkCreateDebugUtilsMessengerEXT  pfnVkCreateDebugUtilsMessengerEXT;
 PFN_vkDestroyDebugUtilsMessengerEXT pfnVkDestroyDebugUtilsMessengerEXT;
@@ -51,6 +55,7 @@ static std::vector<char> readShaderSPV(const std::string& filename) {
     file.close();
     return buffer;
 }
+
 
 
 
@@ -96,10 +101,21 @@ void HelloTriangleApplication::initVulkan() {
     createGraphicsPipeline();
     createFramebuffers();
     createCommandPool();
+    createVertexBuffer();
     createCommandBuffers();
     createSyncObjects();
 }
 
+uint32_t HelloTriangleApplication::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
+
+    vk::PhysicalDeviceMemoryProperties memProperties = physicalDevice.getMemoryProperties();
+    for (const auto& [index, memoryType] : std::views::enumerate(memProperties.memoryTypes)) {
+        if ((typeFilter & (1 << index)) && (memoryType.propertyFlags & properties) == properties) {
+            return index;
+        }
+    }
+    return 0u;
+}
 
 
 bool HelloTriangleApplication::checkValidationLayerSupport() const {
@@ -506,7 +522,7 @@ void HelloTriangleApplication::createRenderPass() {
 }
 
 void HelloTriangleApplication::createGraphicsPipeline() {
-    auto vertexShaderCode = readShaderSPV("shaders/triangle.vert.spv");
+    auto vertexShaderCode = readShaderSPV("shaders/generic.vert.spv");
     auto fragmentShaderCode = readShaderSPV("shaders/triangle.frag.spv");
 
     vk::ShaderModule vertexShaderModule = createShaderModule(vertexShaderCode);
@@ -537,8 +553,8 @@ void HelloTriangleApplication::createGraphicsPipeline() {
     vk::PipelineDynamicStateCreateInfo dynamicState({}, dynamicStates);
 
     // Vertex binding
-    std::vector<vk::VertexInputBindingDescription> vertexBindingDescription;
-    std::vector<vk::VertexInputAttributeDescription> vertexAttributeDescription;
+    auto vertexBindingDescription = { Vertex::getBindingDescription() };
+    auto vertexAttributeDescription = Vertex::getAttributeDescriptions();
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo({}, vertexBindingDescription, vertexAttributeDescription);
 
     // Specify the Topology (points, lines, triangles, stripe)
@@ -690,6 +706,36 @@ void HelloTriangleApplication::createCommandPool() {
     commandPool = device.createCommandPool(poolInfo);
 }
 
+void HelloTriangleApplication::createVertexBuffer() {
+    vk::BufferCreateInfo bufferInfo(
+        {},
+        sizeof(vertices[0]) * vertices.size(),
+        vk::BufferUsageFlagBits::eVertexBuffer,
+        vk::SharingMode::eExclusive
+    );
+
+    vertexBuffer = device.createBuffer(bufferInfo);
+
+    vk::MemoryRequirements memRequirements = device.getBufferMemoryRequirements(vertexBuffer);
+
+    vk::MemoryAllocateInfo allocInfo(
+        memRequirements.size,
+        findMemoryType(
+            memRequirements.memoryTypeBits,
+            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+        )
+    );
+
+    vertexBufferMemory = device.allocateMemory(allocInfo);
+    device.bindBufferMemory(vertexBuffer, vertexBufferMemory, 0);
+
+    void* data = device.mapMemory(vertexBufferMemory, 0, bufferInfo.size);
+    std::memcpy(data, vertices.data(), bufferInfo.size);
+    device.unmapMemory(vertexBufferMemory);
+
+}
+
+
 void HelloTriangleApplication::createCommandBuffers() {
     vk::CommandBufferAllocateInfo allocInfo(
         commandPool,
@@ -756,6 +802,10 @@ void HelloTriangleApplication::recordCommandBuffer(vk::CommandBuffer commandBuff
     );
     std::vector<vk::Rect2D> scissors = {scissor};
     commandBuffer.setScissor(0, scissors);
+
+    std::vector<vk::Buffer> vertexBuffers{ vertexBuffer };
+    std::vector<vk::DeviceSize> offsets{ 0 };
+    commandBuffer.bindVertexBuffers(0, vertexBuffers, offsets);
 
     commandBuffer.draw(3, 1, 0, 0);
     commandBuffer.endRenderPass();
@@ -859,6 +909,10 @@ void HelloTriangleApplication::cleanupSwapChain() {
 void HelloTriangleApplication::cleanup() {
 
     cleanupSwapChain();
+
+    device.destroyBuffer(vertexBuffer);
+    device.freeMemory(vertexBufferMemory);
+
 
     device.destroyPipeline(pipeline);
     device.destroyPipelineLayout(pipelineLayout);

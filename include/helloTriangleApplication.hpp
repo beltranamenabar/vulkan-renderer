@@ -4,12 +4,13 @@
 #include <vector>
 #include <optional>
 
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_handles.hpp>
+
+#include "vertex.hpp"
 
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
@@ -49,6 +50,12 @@ private:
     const uint32_t height = 600;
     static constexpr int32_t MAX_FRAMES_IN_FLIGHT = 2;
 
+    const std::vector<Vertex> vertices = {
+        {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
+
     uint32_t currentFrame = 0;
 
     vk::Instance instance;
@@ -79,6 +86,9 @@ private:
     vk::CommandPool commandPool;
 
     std::array<vk::CommandBuffer, MAX_FRAMES_IN_FLIGHT> commandBuffers;
+
+    vk::Buffer vertexBuffer;
+    vk::DeviceMemory vertexBufferMemory;
 
     // Sync
     std::array<vk::Semaphore, MAX_FRAMES_IN_FLIGHT> imageAvailableSemaphores;
@@ -145,6 +155,8 @@ private:
 
     void createSyncObjects();
 
+    void createVertexBuffer();
+
     vk::ShaderModule createShaderModule(const std::vector<char>& code);
 
     /**
@@ -203,6 +215,7 @@ private:
     */
     bool isDeviceSuitable(const vk::PhysicalDevice& device) const;
 
+    uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
 
     /**
      * Utility to create the struct for debug callbacks info struct

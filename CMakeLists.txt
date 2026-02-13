@@ -20,7 +20,7 @@ set(SOURCES
 
 add_executable(vulkan-tutorial ${SOURCES})
 
-target_compile_features(vulkan-tutorial PUBLIC cxx_std_20)
+target_compile_features(vulkan-tutorial PUBLIC cxx_std_23)
 
 target_include_directories(vulkan-tutorial
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
