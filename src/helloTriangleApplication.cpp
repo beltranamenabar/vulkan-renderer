@@ -177,7 +177,7 @@ vk::DebugUtilsMessengerCreateInfoEXT HelloTriangleApplication::populateDebugMess
         {},
         severityFlags,
         messageTypeFlags,
-        &HelloTriangleApplication::debugCallback
+        vk::PFN_DebugUtilsMessengerCallbackEXT(HelloTriangleApplication::debugCallback)
     );
 }
 
@@ -192,15 +192,16 @@ void HelloTriangleApplication::createVulkanInstance() {
         vk::makeApiVersion(0, 0, 1, 0),
         nullptr,
         0u,
-        vk::ApiVersion13
+        vk::ApiVersion12
     );
 
-    /* SHOWS THE LAYERS AVAILABLE
+    
+    // SHOWS THE LAYERS AVAILABLE
     std::vector<vk::LayerProperties> instanceLayerProperties = vk::enumerateInstanceLayerProperties();
     for (auto& layerProperty : instanceLayerProperties) {
         std::cout << "HelloTriangleApplication::createVulkanInstance - Found layer: " << layerProperty.layerName << "\n";
     }
-    */
+    
     std::vector<const char*> enabledExtensions = getRequiredExtensions();
 
     std::vector<const char*> enabledLayers;
