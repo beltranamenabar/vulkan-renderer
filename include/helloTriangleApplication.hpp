@@ -1,6 +1,5 @@
 #pragma once
 
-#include "vulkan/vulkan.hpp"
 #include <cstdint>
 #include <vector>
 #include <optional>
@@ -52,9 +51,16 @@ private:
     static constexpr int32_t MAX_FRAMES_IN_FLIGHT = 2;
 
     const std::vector<Vertex> vertices = {
-        {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    // It's possible to use uint32_t
+    const std::vector<uint16_t> indices = {
+        0, 1, 2,
+        2, 3, 0
     };
 
     uint32_t currentFrame = 0;
@@ -90,6 +96,8 @@ private:
 
     vk::Buffer vertexBuffer;
     vk::DeviceMemory vertexBufferMemory;
+    vk::Buffer indexBuffer;
+    vk::DeviceMemory indexBufferMemory;
 
     // Sync
     std::array<vk::Semaphore, MAX_FRAMES_IN_FLIGHT> imageAvailableSemaphores;
@@ -159,6 +167,7 @@ private:
     void createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags proprties, vk::Buffer& buffer, vk::DeviceMemory& bufferMemory);
     void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
     void createVertexBuffer();
+    void createIndexBuffer();
 
     vk::ShaderModule createShaderModule(const std::vector<char>& code);
 

@@ -102,6 +102,7 @@ void HelloTriangleApplication::initVulkan() {
     createFramebuffers();
     createCommandPool();
     createVertexBuffer();
+    createIndexBuffer();
     createCommandBuffers();
     createSyncObjects();
 }
@@ -847,6 +848,39 @@ void HelloTriangleApplication::createVertexBuffer() {
 
 }
 
+void HelloTriangleApplication::createIndexBuffer() {
+
+    vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+    vk::Buffer stagingBuffer;
+    vk::DeviceMemory stagingBufferMemory;
+
+    createBuffer(
+        bufferSize,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+        stagingBuffer,
+        stagingBufferMemory
+    );
+
+    void* data = device.mapMemory(stagingBufferMemory, 0, bufferSize);
+    std::memcpy(data, indices.data(), bufferSize);
+    device.unmapMemory(stagingBufferMemory);
+
+    createBuffer(
+        bufferSize,
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        indexBuffer,
+        indexBufferMemory
+    );
+
+    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+
+    device.destroyBuffer(stagingBuffer);
+    device.freeMemory(stagingBufferMemory);
+}
+
 
 void HelloTriangleApplication::createCommandBuffers() {
     vk::CommandBufferAllocateInfo allocInfo(
@@ -918,8 +952,9 @@ void HelloTriangleApplication::recordCommandBuffer(vk::CommandBuffer commandBuff
     std::vector<vk::Buffer> vertexBuffers{ vertexBuffer };
     std::vector<vk::DeviceSize> offsets{ 0 };
     commandBuffer.bindVertexBuffers(0, vertexBuffers, offsets);
+    commandBuffer.bindIndexBuffer(indexBuffer, 0, vk::IndexType::eUint16);
 
-    commandBuffer.draw(vertices.size(), 1, 0, 0);
+    commandBuffer.drawIndexed(indices.size(), 1, 0, 0, 0);
     commandBuffer.endRenderPass();
     commandBuffer.end();
 }
@@ -1025,6 +1060,8 @@ void HelloTriangleApplication::cleanup() {
     device.destroyBuffer(vertexBuffer);
     device.freeMemory(vertexBufferMemory);
 
+    device.destroyBuffer(indexBuffer);
+    device.freeMemory(indexBufferMemory);
 
     device.destroyPipeline(pipeline);
     device.destroyPipelineLayout(pipelineLayout);
