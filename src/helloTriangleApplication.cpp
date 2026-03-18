@@ -110,7 +110,9 @@ uint32_t HelloTriangleApplication::findMemoryType(uint32_t typeFilter, vk::Memor
 
     vk::PhysicalDeviceMemoryProperties memProperties = physicalDevice.getMemoryProperties();
     for (const auto& [index, memoryType] : std::views::enumerate(memProperties.memoryTypes)) {
+        std::cout << "HelloTriangleApplication::findMemoryType - Found memory" << vk::to_string(memoryType.propertyFlags) << "\n";
         if ((typeFilter & (1 << index)) && (memoryType.propertyFlags & properties) == properties) {
+            std::cout << "HelloTriangleApplication::findMemoryType - Using this memory" << std::endl;
             return index;
         }
     }
@@ -808,7 +810,7 @@ void HelloTriangleApplication::recordCommandBuffer(vk::CommandBuffer commandBuff
     std::vector<vk::DeviceSize> offsets{ 0 };
     commandBuffer.bindVertexBuffers(0, vertexBuffers, offsets);
 
-    commandBuffer.draw(3, 1, 0, 0);
+    commandBuffer.draw(vertices.size(), 1, 0, 0);
     commandBuffer.endRenderPass();
     commandBuffer.end();
 }
