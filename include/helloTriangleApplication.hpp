@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vulkan/vulkan.hpp"
 #include <cstdint>
 #include <vector>
 #include <optional>
@@ -155,6 +156,8 @@ private:
 
     void createSyncObjects();
 
+    void createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags proprties, vk::Buffer& buffer, vk::DeviceMemory& bufferMemory);
+    void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
     void createVertexBuffer();
 
     vk::ShaderModule createShaderModule(const std::vector<char>& code);

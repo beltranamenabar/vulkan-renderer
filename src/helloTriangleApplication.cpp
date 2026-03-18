@@ -109,10 +109,37 @@ void HelloTriangleApplication::initVulkan() {
 uint32_t HelloTriangleApplication::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
 
     vk::PhysicalDeviceMemoryProperties memProperties = physicalDevice.getMemoryProperties();
+
+#ifndef NDEBUG
+    static bool bMemoryTypeFirstTimeSearching = true;
+    if (bMemoryTypeFirstTimeSearching) {
+        for (size_t index = 0; index < memProperties.memoryHeapCount; ++index) {
+            auto heapType = memProperties.memoryHeaps[index];
+            std::cout << "HelloTriangleApplication::findMemoryType - HeapType " << index << " - size: "  << heapType.size;
+            if (heapType.flags) {
+                std::cout << " - flags: " << vk::to_string(heapType.flags);
+            }
+            std::cout << "\n";
+    
+        }
+        for (size_t index = 0; index < memProperties.memoryTypeCount; ++index) {
+            auto memoryType = memProperties.memoryTypes[index];
+            std::cout << "HelloTriangleApplication::findMemoryType - MemoryType " << index << " - heap: " << memoryType.heapIndex;
+            if (memoryType.propertyFlags) {
+                std::cout << " - type: " << vk::to_string(memoryType.propertyFlags);
+            }
+            std::cout << "\n";
+    
+        }
+        bMemoryTypeFirstTimeSearching = false;
+    }
+#endif
+
     for (const auto& [index, memoryType] : std::views::enumerate(memProperties.memoryTypes)) {
-        std::cout << "HelloTriangleApplication::findMemoryType - Found memory" << vk::to_string(memoryType.propertyFlags) << "\n";
         if ((typeFilter & (1 << index)) && (memoryType.propertyFlags & properties) == properties) {
-            std::cout << "HelloTriangleApplication::findMemoryType - Using this memory" << std::endl;
+#ifndef NDEBUG
+            std::cout << "HelloTriangleApplication::findMemoryType - Using memory " << index << "\n";
+#endif
             return index;
         }
     }
@@ -198,11 +225,13 @@ void HelloTriangleApplication::createVulkanInstance() {
     );
 
     
+#ifndef NDEBUG
     // SHOWS THE LAYERS AVAILABLE
     std::vector<vk::LayerProperties> instanceLayerProperties = vk::enumerateInstanceLayerProperties();
     for (auto& layerProperty : instanceLayerProperties) {
         std::cout << "HelloTriangleApplication::createVulkanInstance - Found layer: " << layerProperty.layerName << "\n";
     }
+#endif
     
     std::vector<const char*> enabledExtensions = getRequiredExtensions();
 
@@ -322,6 +351,17 @@ QueueFamilyIndices HelloTriangleApplication::findQueueFamilies(const vk::Physica
     QueueFamilyIndices indices;
     // Assign index to queue families that could be found
     std::vector<vk::QueueFamilyProperties> queueFamilies = physicalDevice.getQueueFamilyProperties();
+
+#ifndef NDEBUG
+    static bool bFirstTimeSearching = true;
+    if (bFirstTimeSearching)
+    {
+        for(const auto& [index, queueFamily] : std::views::enumerate(queueFamilies)) {
+            std::cout << "HelloTriangleApplication::findQueueFamilies - Found Family " << index << ": "  << vk::to_string(queueFamily.queueFlags) << "\n";
+        }
+        bFirstTimeSearching = false;
+    }
+#endif
 
     for (size_t i = 0; i < queueFamilies.size(); i++) {
         if (queueFamilies[i].queueFlags & vk::QueueFlagBits::eGraphics) {
@@ -709,32 +749,101 @@ void HelloTriangleApplication::createCommandPool() {
     commandPool = device.createCommandPool(poolInfo);
 }
 
-void HelloTriangleApplication::createVertexBuffer() {
+void HelloTriangleApplication::createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties, vk::Buffer& buffer, vk::DeviceMemory& bufferMemory) {
+    
     vk::BufferCreateInfo bufferInfo(
         {},
-        sizeof(vertices[0]) * vertices.size(),
-        vk::BufferUsageFlagBits::eVertexBuffer,
+        size,
+        usage,
         vk::SharingMode::eExclusive
     );
+    
+    buffer = device.createBuffer(bufferInfo);
 
-    vertexBuffer = device.createBuffer(bufferInfo);
-
-    vk::MemoryRequirements memRequirements = device.getBufferMemoryRequirements(vertexBuffer);
+    vk::MemoryRequirements memRequirements = device.getBufferMemoryRequirements(buffer);
 
     vk::MemoryAllocateInfo allocInfo(
         memRequirements.size,
         findMemoryType(
             memRequirements.memoryTypeBits,
-            vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+            properties
         )
     );
 
-    vertexBufferMemory = device.allocateMemory(allocInfo);
-    device.bindBufferMemory(vertexBuffer, vertexBufferMemory, 0);
+    bufferMemory = device.allocateMemory(allocInfo);
+    device.bindBufferMemory(buffer, bufferMemory, 0);
+}
 
-    void* data = device.mapMemory(vertexBufferMemory, 0, bufferInfo.size);
-    std::memcpy(data, vertices.data(), bufferInfo.size);
-    device.unmapMemory(vertexBufferMemory);
+void HelloTriangleApplication::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size) {
+    
+    vk::CommandBufferAllocateInfo allocInfo(
+        commandPool,
+        vk::CommandBufferLevel::ePrimary,
+        1
+    );
+
+    vk::CommandBuffer commandBuffer;
+    auto buffers = device.allocateCommandBuffers(allocInfo);
+    if (buffers.size() != 1) throw std::runtime_error("There was an error allocating the copy command buffer");
+    commandBuffer = buffers[0];
+
+    vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    commandBuffer.begin(beginInfo);
+    
+    vk::BufferCopy copyRegion(0, 0, size);
+    commandBuffer.copyBuffer(srcBuffer, dstBuffer, copyRegion);
+
+    commandBuffer.end();
+
+    std::vector<vk::Semaphore> waitSemaphores{};
+    std::vector<vk::PipelineStageFlags> dstStageMask{};
+    std::vector<vk::Semaphore> signalSemaphores{};
+    vk::SubmitInfo submitInfo(
+        waitSemaphores,
+        dstStageMask,
+        buffers,
+        signalSemaphores
+    );
+
+    graphicsQueue.submit(submitInfo);
+    graphicsQueue.waitIdle();
+
+    device.freeCommandBuffers(commandPool, commandBuffer);
+}
+
+void HelloTriangleApplication::createVertexBuffer() {
+
+    // We create a staging buffer to write from CPU and then copy to the vertex buffer
+    vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+    vk::Buffer stagingBuffer;
+    vk::DeviceMemory stagingBufferMemory;
+
+    createBuffer(
+        bufferSize,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+        stagingBuffer,
+        stagingBufferMemory
+    );
+
+
+    void* data = device.mapMemory(stagingBufferMemory, 0, bufferSize);
+    std::memcpy(data, vertices.data(), bufferSize);
+    device.unmapMemory(stagingBufferMemory);
+
+    createBuffer(
+        bufferSize,
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        vertexBuffer,
+        vertexBufferMemory
+    );
+
+    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+    device.destroyBuffer(stagingBuffer);
+    device.freeMemory(stagingBufferMemory);
 
 }
 
