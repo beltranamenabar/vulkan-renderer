@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.12...3.28)
 
 project(
-    vulkan-tutorial
+    vulkan-renderer
     VERSION 0.1
-    DESCRIPTION "Vulkan tutorial"
+    DESCRIPTION "A simple renderer made in vulkan"
     LANGUAGES CXX
 )
 
@@ -18,15 +18,15 @@ set(SOURCES
     src/helloTriangleApplication.cpp
 )
 
-add_executable(vulkan-tutorial ${SOURCES})
+add_executable(vulkan-renderer ${SOURCES})
 
-target_compile_features(vulkan-tutorial PUBLIC cxx_std_23)
+target_compile_features(vulkan-renderer PUBLIC cxx_std_23)
 
-target_include_directories(vulkan-tutorial
+target_include_directories(vulkan-renderer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(vulkan-tutorial
+target_link_libraries(vulkan-renderer
     PRIVATE glfw
     PRIVATE glm::glm
     PRIVATE Vulkan::Vulkan
@@ -53,11 +53,11 @@ endforeach(GLSL)
 
 add_custom_target(shaders DEPENDS ${SPIRV_BINARY_FILES})
 
-add_dependencies(vulkan-tutorial shaders)
+add_dependencies(vulkan-renderer shaders)
 
-add_custom_command(TARGET vulkan-tutorial POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:vulkan-tutorial>/shaders/"
+add_custom_command(TARGET vulkan-renderer POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:vulkan-renderer>/shaders/"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${PROJECT_BINARY_DIR}/shaders"
-        "$<TARGET_FILE_DIR:vulkan-tutorial>/shaders"
-        )
+        "$<TARGET_FILE_DIR:vulkan-renderer>/shaders"
+)
