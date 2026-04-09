@@ -78,6 +78,7 @@ private:
 
     vk::SwapchainKHR swapChain;
     std::vector<vk::Image> swapChainImages;
+    size_t swapChainImageCount = 0;
     vk::Format swapChainImageFormat;
     vk::Extent2D swapChainExtent;
 
@@ -101,7 +102,7 @@ private:
 
     // Sync
     std::array<vk::Semaphore, MAX_FRAMES_IN_FLIGHT> imageAvailableSemaphores;
-    std::array<vk::Semaphore, MAX_FRAMES_IN_FLIGHT> renderFinishedSemaphores;
+    std::vector<vk::Semaphore> renderFinishedSemaphores;
     std::array<vk::Fence, MAX_FRAMES_IN_FLIGHT> inFlightFences;
 
     bool framebufferResized = false;

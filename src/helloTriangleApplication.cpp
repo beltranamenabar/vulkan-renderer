@@ -472,6 +472,7 @@ void HelloTriangleApplication::createSwapChain() {
 
     swapChain = device.createSwapchainKHR(swapChainCreateInfo);
     swapChainImages = device.getSwapchainImagesKHR(swapChain);
+    swapChainImageCount = swapChainImages.size();
     swapChainExtent = extent;
     swapChainImageFormat = surfaceFormat.format;
 
@@ -897,9 +898,14 @@ void HelloTriangleApplication::createCommandBuffers() {
 void HelloTriangleApplication::createSyncObjects() {
     for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
         imageAvailableSemaphores[i] = device.createSemaphore({});
-        renderFinishedSemaphores[i] = device.createSemaphore({});
         // The signaled enum makes it start signaled, so it just skips the first wait
         inFlightFences[i] = device.createFence({vk::FenceCreateFlagBits::eSignaled});
+    }
+    
+    renderFinishedSemaphores.resize(swapChainImageCount);
+    for(size_t i = 0; i < swapChainImageCount; ++i) {
+        // this do not follow the MAX_FRAME_IN_FLIGHT. see https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html
+        renderFinishedSemaphores[i] = device.createSemaphore({});
     }
 }
 
@@ -993,7 +999,7 @@ void HelloTriangleApplication::drawFrame() {
     std::vector<vk::Semaphore> waitSemaphores = {imageAvailableSemaphores[currentFrame]};
     std::vector<vk::PipelineStageFlags> waitStages = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
     std::vector<vk::CommandBuffer> commandBuffersToUse = {commandBuffers[currentFrame]};
-    std::vector<vk::Semaphore> signalSemaphores = {renderFinishedSemaphores[currentFrame]};
+    std::vector<vk::Semaphore> signalSemaphores = {renderFinishedSemaphores[imageIndex]};
     vk::SubmitInfo submitInfo(
         waitSemaphores,
         waitStages,
@@ -1070,9 +1076,12 @@ void HelloTriangleApplication::cleanup() {
 
     for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
         device.destroySemaphore(imageAvailableSemaphores[i]);
-        device.destroySemaphore(renderFinishedSemaphores[i]);
         device.destroyFence(inFlightFences[i]);
     }
+    for(size_t i = 0; i < swapChainImageCount; ++i) {
+        device.destroySemaphore(renderFinishedSemaphores[i]);
+    }
+
 
     device.destroyCommandPool(commandPool);
 
