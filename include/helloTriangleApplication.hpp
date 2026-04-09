@@ -85,6 +85,7 @@ private:
     std::vector<vk::ImageView> swapChainImageViews;
 
     vk::RenderPass renderPass;
+    vk::DescriptorSetLayout descriptorSetLayout;
     vk::PipelineLayout pipelineLayout;
 
     vk::Pipeline pipeline;
@@ -99,6 +100,13 @@ private:
     vk::DeviceMemory vertexBufferMemory;
     vk::Buffer indexBuffer;
     vk::DeviceMemory indexBufferMemory;
+
+    std::array<vk::Buffer, MAX_FRAMES_IN_FLIGHT> uniformBuffers;
+    std::array<vk::DeviceMemory, MAX_FRAMES_IN_FLIGHT> uniformBuffersMemory;
+    std::array<void*, MAX_FRAMES_IN_FLIGHT> uniformBuffersMapped;
+
+    vk::DescriptorPool descriptorPool;
+    std::vector<vk::DescriptorSet> descriptorSets;
 
     // Sync
     std::array<vk::Semaphore, MAX_FRAMES_IN_FLIGHT> imageAvailableSemaphores;
@@ -154,6 +162,8 @@ private:
     void createImageViews();
 
     void createRenderPass();
+    
+    void createDescriptorSetLayout();
 
     void createGraphicsPipeline();
 
@@ -169,6 +179,9 @@ private:
     void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
     void createVertexBuffer();
     void createIndexBuffer();
+    void createUniformBuffers();
+    void createDescriptorPool();
+    void createDescriptorSets();
 
     vk::ShaderModule createShaderModule(const std::vector<char>& code);
 
@@ -182,9 +195,10 @@ private:
     void cleanup();
     void cleanupSwapChain();
 
-
     void recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t imageIndex);
+    void updateUniformBuffer(uint32_t currentImage);
     void drawFrame();
+
 
     /**
      * Checks all the required extensions needed for the program to work
