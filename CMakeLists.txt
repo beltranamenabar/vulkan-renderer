@@ -33,7 +33,7 @@ target_link_libraries(vulkan-renderer
 )
 
 # Get the validator
-set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
+set(GLSL_VALIDATOR "$ENV{VULKAN_SDK}/bin/glslangValidator")
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
     "shaders/*.frag"
